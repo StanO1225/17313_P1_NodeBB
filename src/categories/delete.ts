@@ -1,33 +1,35 @@
-'use strict';
+import async from 'async';
+import db from '../database';
+import batch from '../batch';
+import plugins from '../plugins';
+import topics from '../topics';
+import groups from '../groups';
+import privileges from '../privileges';
+import cache from '../cache';
 
-const async = require('async');
-const db = require('../database');
-const batch = require('../batch');
-const plugins = require('../plugins');
-const topics = require('../topics');
-const groups = require('../groups');
-const privileges = require('../privileges');
-const cache = require('../cache');
-
-module.exports = function (Categories) {
-    Categories.purge = async function (cid, uid) {
-        await batch.processSortedSet(`cid:${cid}:tids`, async (tids) => {
-            await async.eachLimit(tids, 10, async (tid) => {
+// Functions exported: purge,
+module.exports = function (Categories : any) {
+    Categories.purge = async function (cid : number, uid : number) {
+        await batch.processSortedSet(`cid:${cid}:tids`, async (tids : Array<number>) => {
+            await async.eachLimit(tids, 10, async (tid : number) => {
                 await topics.purgePostsAndTopic(tid, uid);
             });
         }, { alwaysStartAt: 0 });
-
-        const pinnedTids = await db.getSortedSetRevRange(`cid:${cid}:tids:pinned`, 0, -1);
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        const pinnedTids : Array<number> = await db.getSortedSetRevRange(`cid:${cid}:tids:pinned`, 0, -1);
         await async.eachLimit(pinnedTids, 10, async (tid) => {
             await topics.purgePostsAndTopic(tid, uid);
         });
-        const categoryData = await Categories.getCategoryData(cid);
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        const categoryData : any = await Categories.getCategoryData(cid);
         await purgeCategory(cid, categoryData);
         plugins.hooks.fire('action:category.delete', { cid: cid, uid: uid, category: categoryData });
     };
 
-    async function purgeCategory(cid, categoryData) {
-        const bulkRemove = [['categories:cid', cid]];
+    async function purgeCategory(cid : number, categoryData : any) {
+        const bulkRemove : Array<object> = [['categories:cid', cid]];
         if (categoryData && categoryData.name) {
             bulkRemove.push(['categories:name', `${categoryData.name.slice(0, 200).toLowerCase()}:${cid}`]);
         }
@@ -50,17 +52,17 @@ module.exports = function (Categories) {
             `cid:${cid}:tag:whitelist`,
             `category:${cid}`,
         ]);
-        const privilegeList = await privileges.categories.getPrivilegeList();
+        const privilegeList : Array<string> = await privileges.categories.getPrivilegeList();
         await groups.destroy(privilegeList.map(privilege => `cid:${cid}:privileges:${privilege}`));
     }
 
-    async function removeFromParent(cid) {
+    async function removeFromParent(cid : number) {
         const [parentCid, children] = await Promise.all([
             Categories.getCategoryField(cid, 'parentCid'),
             db.getSortedSetRange(`cid:${cid}:children`, 0, -1),
         ]);
 
-        const bulkAdd = [];
+        const bulkAdd : Array<Array<string>> = [];
         const childrenKeys = children.map((cid) => {
             bulkAdd.push(['cid:0:children', cid, cid]);
             return `category:${cid}`;
@@ -83,8 +85,8 @@ module.exports = function (Categories) {
         ]);
     }
 
-    async function deleteTags(cid) {
-        const tags = await db.getSortedSetMembers(`cid:${cid}:tags`);
+    async function deleteTags(cid : number): Promise<void> {
+        const tags : string[] = await db.getSortedSetMembers(`cid:${cid}:tags`);
         await db.deleteAll(tags.map(tag => `cid:${cid}:tag:${tag}:topics`));
         await db.delete(`cid:${cid}:tags`);
     }
