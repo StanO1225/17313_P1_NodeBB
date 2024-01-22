@@ -25,7 +25,7 @@ export default function (Categories : any) {
         }, { alwaysStartAt: 0 });
         // The next line calls a function in a module that has not been updated to TS yet
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        const pinnedTids = await db.getSortedSetRevRange(`cid:${cid}:tids:pinned`, 0, -1);
+        const pinnedTids : Array<number> = await db.getSortedSetRevRange(`cid:${cid}:tids:pinned`, 0, -1) as Array<number>;
         await async.eachLimit(pinnedTids, 10, async (tid) => {
             // The next line calls a function in a module that has not been updated to TS yet
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
@@ -33,20 +33,24 @@ export default function (Categories : any) {
         });
         // The next line calls a function in a module that has not been updated to TS yet
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        const categoryData : any = await Categories.getCategoryData(cid);
+        const categoryData : CategoryObject = await Categories.getCategoryData(cid) as CategoryObject;
         await purgeCategory(cid, categoryData);
         plugins.hooks.fire('action:category.delete', { cid: cid, uid: uid, category: categoryData });
     };
 
-    async function purgeCategory(cid : number, categoryData : any) {
+    async function purgeCategory(cid : number, categoryData : CategoryObject) {
         const bulkRemove : Array<object> = [['categories:cid', cid]];
         if (categoryData && categoryData.name) {
             bulkRemove.push(['categories:name', `${categoryData.name.slice(0, 200).toLowerCase()}:${cid}`]);
         }
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await db.sortedSetRemoveBulk(bulkRemove);
 
         await removeFromParent(cid);
         await deleteTags(cid);
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await db.deleteAll([
             `cid:${cid}:tids`,
             `cid:${cid}:tids:pinned`,
@@ -62,7 +66,9 @@ export default function (Categories : any) {
             `cid:${cid}:tag:whitelist`,
             `category:${cid}`,
         ]);
-        const privilegeList : Array<string> = await privileges.categories.getPrivilegeList();
+        const privilegeList : Array<string> = await privileges.categories.getPrivilegeList() as Array<string>;
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await groups.destroy(privilegeList.map(privilege => `cid:${cid}:privileges:${privilege}`));
     }
 
@@ -106,7 +112,7 @@ export default function (Categories : any) {
     async function deleteTags(cid : number): Promise<void> {
         // The next line calls a function in a module that has not been updated to TS yet
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        const tags : string[] = await db.getSortedSetMembers(`cid:${cid}:tags`);
+        const tags : string[] = await db.getSortedSetMembers(`cid:${cid}:tags`) as string[];
 
         // The next line calls a function in a module that has not been updated to TS yet
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
