@@ -7,18 +7,28 @@ import groups from '../groups';
 import privileges from '../privileges';
 import cache from '../cache';
 
+import { CategoryObject } from '../types';
+
+// type CategoryObject in category.ts
+
 // Functions exported: purge,
-module.exports = function (Categories : any) {
-    Categories.purge = async function (cid : number, uid : number) {
+export default function (Categories : any) {
+    // The next line calls a function in a module that has not been updated to TS yet
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    Categories.purge = async function (cid : number, uid : number) : Promise<void> {
         await batch.processSortedSet(`cid:${cid}:tids`, async (tids : Array<number>) => {
             await async.eachLimit(tids, 10, async (tid : number) => {
+                // The next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call
                 await topics.purgePostsAndTopic(tid, uid);
             });
         }, { alwaysStartAt: 0 });
         // The next line calls a function in a module that has not been updated to TS yet
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        const pinnedTids : Array<number> = await db.getSortedSetRevRange(`cid:${cid}:tids:pinned`, 0, -1);
+        const pinnedTids = await db.getSortedSetRevRange(`cid:${cid}:tids:pinned`, 0, -1);
         await async.eachLimit(pinnedTids, 10, async (tid) => {
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             await topics.purgePostsAndTopic(tid, uid);
         });
         // The next line calls a function in a module that has not been updated to TS yet
@@ -57,20 +67,28 @@ module.exports = function (Categories : any) {
     }
 
     async function removeFromParent(cid : number) {
-        const [parentCid, children] = await Promise.all([
+        const [parentCid, children] : [number, number[]] = await Promise.all([
             Categories.getCategoryField(cid, 'parentCid'),
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             db.getSortedSetRange(`cid:${cid}:children`, 0, -1),
         ]);
 
-        const bulkAdd : Array<Array<string>> = [];
+        const bulkAdd : Array<Array<any>> = [];
         const childrenKeys = children.map((cid) => {
             bulkAdd.push(['cid:0:children', cid, cid]);
             return `category:${cid}`;
         });
 
         await Promise.all([
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             db.sortedSetRemove(`cid:${parentCid}:children`, cid),
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             db.setObjectField(childrenKeys, 'parentCid', 0),
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             db.sortedSetAddBulk(bulkAdd),
         ]);
 
@@ -86,8 +104,16 @@ module.exports = function (Categories : any) {
     }
 
     async function deleteTags(cid : number): Promise<void> {
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         const tags : string[] = await db.getSortedSetMembers(`cid:${cid}:tags`);
+
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await db.deleteAll(tags.map(tag => `cid:${cid}:tag:${tag}:topics`));
+
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await db.delete(`cid:${cid}:tags`);
     }
-};
+}
