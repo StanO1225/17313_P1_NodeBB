@@ -1,4 +1,4 @@
-import async from 'async';
+// import async from 'async';
 import db from '../database';
 import batch from '../batch';
 import plugins from '../plugins';
@@ -107,21 +107,23 @@ export default function (Categories : Categories) {
     // The next line calls a function in a module that has not been updated to TS yet
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     Categories.purge = async function (cid : number, uid : number) : Promise<void> {
-        await batch.processSortedSet(`cid:${cid}:tids`, async (tids : Array<number>) => {
-            await async.eachLimit(tids, 10, async (tid : number) => {
+        await batch.processSortedSet(`cid:${cid}:tids`, async (tids: Array<number>) => {
+            // Use Promise.all with map to concurrently execute async operations
+            await Promise.all(tids.map(async (tid) => {
                 // The next line calls a function in a module that has not been updated to TS yet
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call
                 await topics.purgePostsAndTopic(tid, uid);
-            });
+            }));
         }, { alwaysStartAt: 0 });
         // The next line calls a function in a module that has not been updated to TS yet
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         const pinnedTids : Array<number> = await db.getSortedSetRevRange(`cid:${cid}:tids:pinned`, 0, -1) as Array<number>;
-        await async.eachLimit(pinnedTids, 10, async (tid) : Promise<void> => {
+        // Use Promise.all with map to concurrently execute async operations
+        await Promise.all(pinnedTids.map(async (tid) => {
             // The next line calls a function in a module that has not been updated to TS yet
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             await topics.purgePostsAndTopic(tid, uid);
-        });
+        }));
         // The next line calls a function in a module that has not been updated to TS yet
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         const categoryData = await Categories.getCategoryData(cid);
